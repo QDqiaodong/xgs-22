@@ -21,6 +21,14 @@
           <el-icon><component :is="Icons.Document" /></el-icon>
           <span>操作台账</span>
         </el-menu-item>
+        <el-menu-item index="/inspection">
+          <el-icon><component :is="Icons.Search" /></el-icon>
+          <span>灯组巡检</span>
+        </el-menu-item>
+        <el-menu-item index="/inspection-exception">
+          <el-icon><component :is="Icons.Warn" /></el-icon>
+          <span>异常处置</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
@@ -39,11 +47,13 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { 
-  ReadingLamp as IconLightbulb, 
-  Location as IconLocation, 
+import {
+  ReadingLamp as IconLightbulb,
+  Location as IconLocation,
   RefreshLeft as IconSwap,
-  Document as IconDocument 
+  Document as IconDocument,
+  Search as IconSearch,
+  Warning as IconWarn
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -53,7 +63,9 @@ const Icons = {
   Lightbulb: IconLightbulb,
   Location: IconLocation,
   Swap: IconSwap,
-  Document: IconDocument
+  Document: IconDocument,
+  Search: IconSearch,
+  Warn: IconWarn
 }
 
 const activeMenu = computed(() => route.path)
@@ -62,7 +74,9 @@ const pageTitleMap = {
   '/light-group': '灯组管理',
   '/zone': '车库分区管理',
   '/transfer': '批量划转',
-  '/ledger': '操作台账'
+  '/ledger': '操作台账',
+  '/inspection': '灯组巡检批次',
+  '/inspection-exception': '巡检异常处置'
 }
 
 const pageTitle = computed(() => pageTitleMap[route.path] || '灯组管理系统')

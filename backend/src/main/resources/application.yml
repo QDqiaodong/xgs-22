@@ -2,12 +2,21 @@ server:
   port: 8127
 
 spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
   datasource:
     url: jdbc:mysql://localhost:3532/light_manager?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: admin
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
-  
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:inspection-schema.sql
+      encoding: UTF-8
+
   redis:
     host: localhost
     port: 6632

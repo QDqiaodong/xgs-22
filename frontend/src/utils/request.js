@@ -11,7 +11,11 @@ request.interceptors.response.use(
     if (res.code === 200) {
       return res
     } else {
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // 保留业务码(如 409 并发冲突)与后端返回的最新数据, 供页面区分提示与刷新
+      const error = new Error(res.message || '请求失败')
+      error.code = res.code
+      error.data = res.data
+      return Promise.reject(error)
     }
   },
   error => {

@@ -24,6 +24,16 @@ const routes = [
     path: '/ledger',
     name: 'Ledger',
     component: () => import('../views/Ledger.vue')
+  },
+  {
+    path: '/inspection',
+    name: 'Inspection',
+    component: () => import('../views/Inspection.vue')
+  },
+  {
+    path: '/inspection-exception',
+    name: 'InspectionException',
+    component: () => import('../views/InspectionException.vue')
   }
 ]
 

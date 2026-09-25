@@ -1,6 +1,7 @@
 package com.example.lightmanager.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
@@ -25,7 +26,9 @@ public class LightGroup {
     private LocalDateTime createdAt;
     
     private LocalDateTime updatedAt;
-    
+
+    /** 非持久化字段: 由关联 garage_zone 查询填充 */
+    @TableField(exist = false)
     private String zoneName;
 
     public Long getId() { return id; }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.lightmanager.mapper.InspectionItemMapper">
+
+    <resultMap id="InspectionItemResultMap" type="com.example.lightmanager.entity.InspectionItem">
+        <id property="id" column="id"/>
+        <result property="batchId" column="batch_id"/>
+        <result property="lightGroupId" column="light_group_id"/>
+        <result property="groupCode" column="group_code"/>
+        <result property="installationLocation" column="installation_location"/>
+        <result property="power" column="power"/>
+        <result property="zoneId" column="zone_id"/>
+        <result property="zoneName" column="zone_name"/>
+        <result property="inspectResult" column="inspect_result"/>
+        <result property="siteDescription" column="site_description"/>
+        <result property="recordedAt" column="recorded_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!--
+      草稿暂存/补录:
+      1) ON DUPLICATE KEY 仅在批次仍为暂存(status=0)时才更新, 批次提交后原始结果不会被覆盖;
+      2) uk_batch_light 唯一约束保证一个批次一个灯组只有一条结果。
+    -->
+    <insert id="upsertDraftItem" parameterType="com.example.lightmanager.entity.InspectionItem">
+        INSERT INTO inspection_item
+            (batch_id, light_group_id, group_code, installation_location, power,
+             zone_id, zone_name, inspect_result, site_description, recorded_at)
+        VALUES
+            (#{item.batchId}, #{item.lightGroupId}, #{item.groupCode}, #{item.installationLocation}, #{item.power},
+             #{item.zoneId}, #{item.zoneName}, #{item.inspectResult}, #{item.siteDescription}, #{item.recordedAt})
+        ON DUPLICATE KEY UPDATE
+            inspect_result = CASE WHEN (SELECT b.status FROM inspection_batch b WHERE b.id = #{item.batchId}) = 0
+                                  THEN VALUES(inspect_result) ELSE inspect_result END,
+            site_description = CASE WHEN (SELECT b.status FROM inspection_batch b WHERE b.id = #{item.batchId}) = 0
+                                    THEN VALUES(site_description) ELSE site_description END,
+            recorded_at = CASE WHEN (SELECT b.status FROM inspection_batch b WHERE b.id = #{item.batchId}) = 0
+                               THEN VALUES(recorded_at) ELSE recorded_at END
+    </insert>
+
+    <select id="selectByBatchId" resultMap="InspectionItemResultMap">
+        SELECT * FROM inspection_item
+        WHERE batch_id = #{batchId}
+        ORDER BY group_code ASC
+    </select>
+
+    <select id="countRecordedByBatchId" resultType="int">
+        SELECT COUNT(*) FROM inspection_item
+        WHERE batch_id = #{batchId} AND inspect_result IS NOT NULL
+    </select>
+</mapper>

@@ -65,3 +65,46 @@ export const transferApi = {
     return request.get(`/transfer/ledger/${id}/details`)
   }
 }
+
+// ==================== 灯组巡检异常处置 ====================
+
+export const inspectionApi = {
+  // 批次
+  createBatch(data) {
+    return request.post('/inspection/batch', data)
+  },
+  saveItems(data) {
+    return request.post('/inspection/items/save', data)
+  },
+  submitBatch(batchId) {
+    return request.post('/inspection/batch/submit', { batchId })
+  },
+  getBatchPage(params) {
+    return request.get('/inspection/batch/page', { params })
+  },
+  getBatchDetail(id) {
+    return request.get(`/inspection/batch/${id}`)
+  },
+  // 异常清单
+  getExceptionPage(params) {
+    return request.get('/inspection/exception/page', { params })
+  },
+  getExceptionDetail(id) {
+    return request.get(`/inspection/exception/${id}`)
+  },
+  returnException(data) {
+    return request.post('/inspection/exception/return', data)
+  },
+  supplement(data) {
+    return request.post('/inspection/exception/supplement', data)
+  },
+  confirm(data) {
+    return request.post('/inspection/exception/confirm', data)
+  },
+  registerHandleResult(data) {
+    return request.post('/inspection/exception/handle', data)
+  },
+  close(data) {
+    return request.post('/inspection/exception/close', data)
+  }
+}

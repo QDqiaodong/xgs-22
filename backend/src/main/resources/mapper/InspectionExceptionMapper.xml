@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.lightmanager.mapper.InspectionExceptionMapper">
+
+    <resultMap id="ExceptionResultMap" type="com.example.lightmanager.entity.InspectionException">
+        <id property="id" column="id"/>
+        <result property="batchId" column="batch_id"/>
+        <result property="itemId" column="item_id"/>
+        <result property="lightGroupId" column="light_group_id"/>
+        <result property="groupCode" column="group_code"/>
+        <result property="installationLocation" column="installation_location"/>
+        <result property="snapshotZoneId" column="snapshot_zone_id"/>
+        <result property="snapshotZoneName" column="snapshot_zone_name"/>
+        <result property="exceptionType" column="exception_type"/>
+        <result property="siteDescription" column="site_description"/>
+        <result property="originalDescription" column="original_description"/>
+        <result property="reporter" column="reporter"/>
+        <result property="reportedAt" column="reported_at"/>
+        <result property="status" column="status"/>
+        <result property="version" column="version"/>
+        <result property="reviewOpinion" column="review_opinion"/>
+        <result property="handleDeadline" column="handle_deadline"/>
+        <result property="reviewer" column="reviewer"/>
+        <result property="reviewedAt" column="reviewed_at"/>
+        <result property="handler" column="handler"/>
+        <result property="handleResult" column="handle_result"/>
+        <result property="handledAt" column="handled_at"/>
+        <result property="closer" column="closer"/>
+        <result property="closedAt" column="closed_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="currentZoneId" column="current_zone_id"/>
+        <result property="currentZoneName" column="current_zone_name"/>
+        <result property="zoneChanged" column="zone_changed"/>
+    </resultMap>
+
+    <!-- 异常清单: 快照分区始终取自巡检表, 当前分区实时关联灯组/分区表比对 -->
+    <select id="selectExceptionPage" resultMap="ExceptionResultMap">
+        SELECT e.*,
+               lg.zone_id AS current_zone_id,
+               gz.zone_name AS current_zone_name,
+               CASE WHEN lg.zone_id IS NULL THEN 1
+                    WHEN lg.zone_id &lt;&gt; e.snapshot_zone_id THEN 1
+                    ELSE 0 END AS zone_changed
+        FROM inspection_exception e
+        LEFT JOIN light_group lg ON lg.id = e.light_group_id
+        LEFT JOIN garage_zone gz ON gz.id = lg.zone_id
+        WHERE 1=1
+        <if test="batchNo != null and batchNo != ''">
+            AND e.batch_id = (SELECT id FROM inspection_batch WHERE batch_no LIKE CONCAT('%', #{batchNo}, '%') LIMIT 1)
+        </if>
+        <if test="groupCode != null and groupCode != ''">AND e.group_code LIKE CONCAT('%', #{groupCode}, '%')</if>
+        <if test="exceptionType != null and exceptionType != ''">AND e.exception_type = #{exceptionType}</if>
+        <if test="status != null and status != ''">AND e.status = #{status}</if>
+        <if test="reporter != null and reporter != ''">AND e.reporter LIKE CONCAT('%', #{reporter}, '%')</if>
+        <if test="zoneChanged != null">
+            AND (CASE WHEN lg.zone_id IS NULL THEN 1
+                      WHEN lg.zone_id &lt;&gt; e.snapshot_zone_id THEN 1
+                      ELSE 0 END) = #{zoneChanged}
+        </if>
+        ORDER BY e.reported_at DESC, e.id DESC
+    </select>
+
+    <select id="selectDetailById" resultMap="ExceptionResultMap">
+        SELECT e.*,
+               lg.zone_id AS current_zone_id,
+               gz.zone_name AS current_zone_name,
+               CASE WHEN lg.zone_id IS NULL THEN 1
+                    WHEN lg.zone_id &lt;&gt; e.snapshot_zone_id THEN 1
+                    ELSE 0 END AS zone_changed
+        FROM inspection_exception e
+        LEFT JOIN light_group lg ON lg.id = e.light_group_id
+        LEFT JOIN garage_zone gz ON gz.id = lg.zone_id
+        WHERE e.id = #{id}
+    </select>
+
+    <!-- 退回: PENDING -> RETURNED -->
+    <update id="returnException">
+        UPDATE inspection_exception
+        SET status = 'RETURNED',
+            version = version + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+          AND version = #{expectedVersion}
+    </update>
+
+    <!-- 补充: RETURNED -> PENDING, 仅更新现场说明, 原始说明 original_description 永不修改 -->
+    <update id="supplementException">
+        UPDATE inspection_exception
+        SET status = 'PENDING',
+            site_description = #{siteDescription},
+            version = version + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'RETURNED'
+          AND version = #{expectedVersion}
+    </update>
+
+    <!-- 确认: PENDING -> CONFIRMED -->
+    <update id="confirmException">
+        UPDATE inspection_exception
+        SET status = 'CONFIRMED',
+            review_opinion = #{reviewOpinion},
+            handle_deadline = #{handleDeadline},
+            reviewer = #{reviewer},
+            reviewed_at = #{now},
+            version = version + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+          AND version = #{expectedVersion}
+    </update>
+
+    <!-- 登记处理结果: 保持 CONFIRMED, 但仍按版本号防重复提交 -->
+    <update id="registerHandleResult">
+        UPDATE inspection_exception
+        SET handler = #{handler},
+            handle_result = #{handleResult},
+            handled_at = #{now},
+            version = version + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'CONFIRMED'
+          AND version = #{expectedVersion}
+    </update>
+
+    <!-- 关闭: CONFIRMED -> CLOSED (终态, 无任何路径再改回) -->
+    <update id="closeException">
+        UPDATE inspection_exception
+        SET status = 'CLOSED',
+            closer = #{closer},
+            closed_at = #{now},
+            version = version + 1,
+            updated_at = #{now}
+        WHERE id = #{id}
+          AND status = 'CONFIRMED'
+          AND version = #{expectedVersion}
+    </update>
+</mapper>
