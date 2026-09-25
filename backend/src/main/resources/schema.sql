@@ -60,6 +60,93 @@ CREATE TABLE IF NOT EXISTS ledger_detail (
     CONSTRAINT fk_detail_light FOREIGN KEY (light_group_id) REFERENCES light_group(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='台账明细表';
 
+CREATE TABLE IF NOT EXISTS inspection_batch (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '巡检批次ID',
+    batch_no VARCHAR(64) NOT NULL UNIQUE COMMENT '巡检批次号',
+    inspector VARCHAR(50) NOT NULL COMMENT '巡检人',
+    zone_ids TEXT NOT NULL COMMENT '巡检分区ID列表(逗号分隔)',
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT' COMMENT '状态: DRAFT暂存 SUBMITTED已提交',
+    total_count INT NOT NULL DEFAULT 0 COMMENT '灯组总数',
+    abnormal_count INT NOT NULL DEFAULT 0 COMMENT '异常数量',
+    remark VARCHAR(500) COMMENT '批次备注',
+    started_at DATETIME NOT NULL COMMENT '巡检开始时间(分区快照时点)',
+    submitted_at DATETIME COMMENT '提交时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_batch_no (batch_no),
+    INDEX idx_status (status),
+    INDEX idx_inspector (inspector)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='灯组巡检批次表';
+
+CREATE TABLE IF NOT EXISTS inspection_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '巡检条目ID',
+    batch_id BIGINT NOT NULL COMMENT '巡检批次ID',
+    light_group_id BIGINT NOT NULL COMMENT '灯组ID',
+    group_code VARCHAR(50) NOT NULL COMMENT '灯组编号(快照)',
+    result_type VARCHAR(20) COMMENT '巡检结果: NORMAL正常 EXTINGUISHED熄灭 FLICKER频闪 DIM亮度不足',
+    description VARCHAR(1000) COMMENT '现场说明(异常必填)',
+    snapshot_zone_id BIGINT NOT NULL COMMENT '巡检开始时所属分区ID(现场快照)',
+    snapshot_zone_name VARCHAR(100) NOT NULL COMMENT '巡检开始时所属分区名称(现场快照)',
+    snapshot_location VARCHAR(200) COMMENT '巡检开始时安装位置(现场快照)',
+    recorded_at DATETIME COMMENT '登记时间',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_batch_light (batch_id, light_group_id),
+    INDEX idx_batch_id (batch_id),
+    INDEX idx_light_group_id (light_group_id),
+    CONSTRAINT fk_item_batch FOREIGN KEY (batch_id) REFERENCES inspection_batch(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='巡检结果条目表(原始结果不可覆盖)';
+
+CREATE TABLE IF NOT EXISTS inspection_anomaly (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '异常ID',
+    batch_id BIGINT NOT NULL COMMENT '巡检批次ID',
+    batch_no VARCHAR(64) NOT NULL COMMENT '巡检批次号(冗余)',
+    item_id BIGINT NOT NULL COMMENT '巡检条目ID',
+    light_group_id BIGINT NOT NULL COMMENT '灯组ID',
+    group_code VARCHAR(50) NOT NULL COMMENT '灯组编号',
+    anomaly_type VARCHAR(20) NOT NULL COMMENT '异常类型: EXTINGUISHED熄灭 FLICKER频闪 DIM亮度不足',
+    original_description VARCHAR(1000) NOT NULL COMMENT '原始现场说明(不可修改)',
+    supplement_description VARCHAR(1000) COMMENT '补充说明(退回补充时更新)',
+    snapshot_zone_id BIGINT NOT NULL COMMENT '巡检时分区ID(快照)',
+    snapshot_zone_name VARCHAR(100) NOT NULL COMMENT '巡检时分区名称(快照)',
+    snapshot_location VARCHAR(200) COMMENT '巡检时安装位置(快照)',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING_REVIEW' COMMENT '状态: PENDING_REVIEW待复核 RETURNED已退回 CONFIRMED已确认 PROCESSING处理中 CLOSED已关闭',
+    reporter VARCHAR(50) NOT NULL COMMENT '上报人',
+    reported_at DATETIME NOT NULL COMMENT '上报时间',
+    reviewer VARCHAR(50) COMMENT '复核确认人',
+    review_opinion VARCHAR(1000) COMMENT '处理意见(确认时填写)',
+    handling_deadline DATETIME COMMENT '处理时限(确认时填写)',
+    confirmed_at DATETIME COMMENT '确认时间',
+    handler VARCHAR(50) COMMENT '处理结果登记人',
+    handling_result VARCHAR(1000) COMMENT '处理结果',
+    handled_at DATETIME COMMENT '处理结果登记时间',
+    closer VARCHAR(50) COMMENT '关闭人',
+    closed_at DATETIME COMMENT '关闭时间',
+    version INT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_batch_id (batch_id),
+    INDEX idx_light_group_id (light_group_id),
+    INDEX idx_status (status),
+    INDEX idx_group_code (group_code),
+    CONSTRAINT fk_anomaly_batch FOREIGN KEY (batch_id) REFERENCES inspection_batch(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='巡检异常处置表';
+
+CREATE TABLE IF NOT EXISTS inspection_action_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
+    anomaly_id BIGINT NOT NULL COMMENT '异常ID',
+    action_type VARCHAR(30) NOT NULL COMMENT '动作: SUBMIT上报 RETURN退回 SUPPLEMENT补充 CONFIRM确认 RESOLVE登记处理结果 CLOSE关闭',
+    content VARCHAR(2000) COMMENT '操作内容',
+    deadline DATETIME COMMENT '处理时限(确认动作记录)',
+    operator VARCHAR(50) NOT NULL COMMENT '操作人',
+    operated_at DATETIME NOT NULL COMMENT '操作时间',
+    from_version INT COMMENT '操作前版本号',
+    to_version INT COMMENT '操作后版本号',
+    INDEX idx_anomaly_id (anomaly_id),
+    INDEX idx_operated_at (operated_at),
+    CONSTRAINT fk_log_anomaly FOREIGN KEY (anomaly_id) REFERENCES inspection_anomaly(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='异常处置操作日志表(追加不可改)';
+
 INSERT IGNORE INTO garage_zone (zone_code, zone_name, parent_id, level, sort_order, status) VALUES
 ('ZONE-A', 'A区车库', 0, 1, 1, 1),
 ('ZONE-B', 'B区车库', 0, 1, 2, 1),

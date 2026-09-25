@@ -65,3 +65,45 @@ export const transferApi = {
     return request.get(`/transfer/ledger/${id}/details`)
   }
 }
+
+export const inspectionApi = {
+  createBatch(data) {
+    return request.post('/inspection/batch', data)
+  },
+  getBatchPage(params) {
+    return request.get('/inspection/batch/page', { params })
+  },
+  getBatchDetail(id) {
+    return request.get(`/inspection/batch/${id}`)
+  },
+  saveItems(id, data) {
+    return request.put(`/inspection/batch/${id}/items`, data)
+  },
+  submitBatch(id, data) {
+    return request.post(`/inspection/batch/${id}/submit`, data || {})
+  }
+}
+
+export const anomalyApi = {
+  getPage(params) {
+    return request.get('/inspection-anomaly/page', { params })
+  },
+  getDetail(id) {
+    return request.get(`/inspection-anomaly/${id}`)
+  },
+  doReturn(id, data) {
+    return request.post(`/inspection-anomaly/${id}/return`, data)
+  },
+  supplement(id, data) {
+    return request.post(`/inspection-anomaly/${id}/supplement`, data)
+  },
+  confirm(id, data) {
+    return request.post(`/inspection-anomaly/${id}/confirm`, data)
+  },
+  resolve(id, data) {
+    return request.post(`/inspection-anomaly/${id}/resolve`, data)
+  },
+  close(id, data) {
+    return request.post(`/inspection-anomaly/${id}/close`, data)
+  }
+}

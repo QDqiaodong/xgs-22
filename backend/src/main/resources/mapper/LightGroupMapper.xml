@@ -50,4 +50,15 @@
         WHERE lg.zone_id = #{zoneId}
         ORDER BY lg.group_code
     </select>
+
+    <select id="selectByZoneIds" resultMap="LightGroupResultMap">
+        SELECT lg.*, gz.zone_name
+        FROM light_group lg
+        LEFT JOIN garage_zone gz ON lg.zone_id = gz.id
+        WHERE lg.zone_id IN
+        <foreach collection="zoneIds" item="zoneId" open="(" separator="," close=")">
+            #{zoneId}
+        </foreach>
+        ORDER BY lg.group_code
+    </select>
 </mapper>

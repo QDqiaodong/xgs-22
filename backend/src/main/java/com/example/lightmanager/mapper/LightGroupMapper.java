@@ -21,4 +21,6 @@ public interface LightGroupMapper extends BaseMapper<LightGroup> {
     int batchUpdateZoneId(@Param("ids") List<Long> ids, @Param("zoneId") Long zoneId);
     
     List<LightGroup> selectByZoneId(@Param("zoneId") Long zoneId);
+
+    List<LightGroup> selectByZoneIds(@Param("zoneIds") List<Long> zoneIds);
 }
